@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 Future<Album> fetchAlbum(http.Client client) async {
-  final response = await client
-      .get(Uri.parse('https://jsonplaceholder.typicode.com/albums/1'));
+  final response = await client.get(
+    Uri.parse('https://jsonplaceholder.typicode.com/albums/1'),
+  );
 
   if (response.statusCode == 200) {
     // If the server did return a 200 OK response,
@@ -21,11 +22,7 @@ class Album {
   final int id;
   final String title;
 
-  const Album({
-    required this.userId,
-    required this.id,
-    required this.title,
-  });
+  const Album({required this.userId, required this.id, required this.title});
 
   factory Album.fromJson(Map<String, dynamic> json) {
     return Album(

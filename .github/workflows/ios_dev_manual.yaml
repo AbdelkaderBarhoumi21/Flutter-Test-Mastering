@@ -3,10 +3,10 @@ name: Flutter – AndroidBuild Dev
 on:
     push:
         branches:
-            - main
+            - main-1
     pull_request:
         branches:
-            - main
+            - main-1
 jobs:
     build:
         runs-on: macos-latest
@@ -28,6 +28,14 @@ jobs:
 
             - name: Install dependencies
               run: flutter pub get
+            - name: Auto Format the card code
+              run: dart format .
+            - name: Verify the dart code is formatted
+              run: dart format --output=none --set-exit-if-changed .
+            - name: Run test
+              run: flutter test
+            - name: Analyse the dart code
+              run: flutter analyze --fatal-warnings
             - name: Install IOS dependencies
               run: |
                   cd ios 

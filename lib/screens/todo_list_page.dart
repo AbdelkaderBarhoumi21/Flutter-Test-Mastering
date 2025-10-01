@@ -15,16 +15,12 @@ class _TodoListState extends State<TodoList> {
     return MaterialApp(
       title: _appTitle,
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text(_appTitle),
-        ),
+        appBar: AppBar(title: const Text(_appTitle)),
         body: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: TextField(
-                controller: controller,
-              ),
+              child: TextField(controller: controller),
             ),
             Expanded(
               child: ListView.builder(

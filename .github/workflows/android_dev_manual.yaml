@@ -3,10 +3,10 @@ name: Flutter – AndroidBuild Dev
 on:
   push:
     branches:
-      - main-1
+      - main
   pull_request:
     branches:
-      - main-1
+      - main
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,5 +28,13 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+      - name: Auto Format the card code
+        run: dart format .
+      - name: Verify the dart code is formatted
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Run test
+        run: flutter test
+      - name: Analyse the dart code
+        run: flutter analyze --fatal-warnings
       - name: Build APK (debug)
         run: flutter build apk --debug --build-name=1.0.0 --build-number=1
