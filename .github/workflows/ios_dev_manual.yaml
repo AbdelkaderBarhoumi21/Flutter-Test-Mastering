@@ -1,45 +1,103 @@
-name: Flutter – AndroidBuild Dev
+name: Flutter – iOS Build (Debug, no codesign)
 
 on:
     push:
-        branches:
-            - main
+        branches: [main]
     pull_request:
-        branches:
-            - main
+        branches: [main]
+    workflow_dispatch: {}
+
 jobs:
-    build:
+    build-ios:
         runs-on: macos-latest
+
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-            #   - name: Setup JDK
-            #     uses: actions/setup-java@v4
-            #     with:
-            #       java-version: "17"
-            #       distribution: "zulu" # no need for java for IOS
-            - name: Setup BASE_URL File
+
+            # (Optionnel) reconstituer un fichier privé encodé en Base64
+            - name: Setup BASE URL File
               run: echo "${{ secrets.BASE_URL_FILE }}" | base64 --decode > lib/core/data/local/remote/token/base_url.dart
 
-            - name: Setup Flutter
+            - name: Setup Flutter (stable)
               uses: subosito/flutter-action@v2
               with:
-                  channel: "stable"
+                  channel: stable
+                  # flutter-version: 3.27.3  # <- décommente si tu veux pin une version précise
 
-            - name: Install dependencies
+            - name: Install Dart/Flutter deps
               run: flutter pub get
-            - name: Auto Format the card code
+
+            # Hygiène CI (facultatif)
+            - name: Auto format Dart code
               run: dart format .
-            - name: Verify the dart code is formatted
+            - name: Verify formatting
               run: dart format --output=none --set-exit-if-changed .
-            - name: Run test
-              run: flutter test
-            - name: Analyse the dart code
+            - name: Analyze Dart code
               run: flutter analyze --fatal-warnings
-            - name: Install IOS dependencies
+            - name: Run tests
+              run: flutter test
+
+            # --- iOS setup & Pods ---------------------------------------------------
+            - name: Ensure iOS host project exists
               run: |
-                  cd ios 
+                  if [ ! -d "ios" ]; then
+                    echo "No ios/ folder: creating with 'flutter create .'"
+                    flutter create .
+                  fi
+                  if [ ! -f "ios/Podfile" ]; then
+                    echo "No Podfile found, recreating iOS host"
+                    rm -rf ios
+                    flutter create .
+                  fi
+
+            - name: Ensure iOS deployment target 13.0 in Podfile
+              run: |
+                  set -e
+                  # Fix/ajoute: platform :ios, '13.0'
+                  if grep -qE "^\s*#\s*platform :ios" ios/Podfile; then
+                    sed -i '' "s/^\s*#\s*platform :ios.*/platform :ios, '13.0'/" ios/Podfile
+                  elif grep -qE "^\s*platform :ios" ios/Podfile; then
+                    sed -i '' "s/^\s*platform :ios.*/platform :ios, '13.0'/" ios/Podfile
+                  else
+                    sed -i '' "1i\\
+                   platform :ios, '13.0'\\
+                    " ios/Podfile
+                  fi
+
+                  # post_install pour forcer IPHONEOS_DEPLOYMENT_TARGET = 13.0 à tous les pods
+                  if ! grep -q "post_install do |installer|" ios/Podfile; then
+                    cat >> ios/Podfile <<'RUBY'
+
+                  post_install do |installer|
+                  installer.pods_project.targets.each do |t|
+                  t.build_configurations.each do |config|
+                   config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+                   end
+                   end
+                   end
+                   RUBY
+                  fi
+
+            - name: Install iOS dependencies (CocoaPods)
+              run: |
+                  set -e
+                  cd ios
+                  rm -rf Pods Podfile.lock
+                  pod repo update
                   pod install --repo-update
                   cd ..
-            - name: Build ios
-              run: flutter build ios --debug --build-name=1.0.0 --build-number=1 --no-codesign
+
+            # --- Build --------------------------------------------------------------
+            - name: Build iOS (debug, no codesign)
+              run: flutter build ios --debug --no-codesign --build-name=1.0.0 --build-number=1
+
+            # (Optionnel) artefacts utiles au debug
+            - name: Upload build logs
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ios-build-artifacts
+                  path: |
+                      build/ios/**
+                      ~/Library/Developer/Xcode/DerivedData/**/Logs/Build/*.xcactivitylog
