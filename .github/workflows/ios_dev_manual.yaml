@@ -1,0 +1,37 @@
+name: Flutter – AndroidBuild Dev
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+jobs:
+    build:
+        runs-on: macos-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+            #   - name: Setup JDK
+            #     uses: actions/setup-java@v4
+            #     with:
+            #       java-version: "17"
+            #       distribution: "zulu" # no need for java for IOS
+            - name: Setup BASE_URL File
+              run: echo "${{ secrets.BASE_URL_FILE }}" | base64 --decode > lib/core/data/local/remote/token/base_url.dart
+
+            - name: Setup Flutter
+              uses: subosito/flutter-action@v2
+              with:
+                  channel: "stable"
+
+            - name: Install dependencies
+              run: flutter pub get
+            - name: Install IOS dependencies
+              run: |
+                  cd ios 
+                  pod install --repo-update
+                  cd ..
+            - name: Build ios
+              run: flutter build ios --debug --build-name=1.0.0 --build-number=1 --no-codesign
