@@ -3,10 +3,10 @@ name: Flutter – AndroidBuild Dev
 on:
     push:
         branches:
-            - main-1
+            - main
     pull_request:
         branches:
-            - main-1
+            - main
 jobs:
     build:
         runs-on: macos-latest
